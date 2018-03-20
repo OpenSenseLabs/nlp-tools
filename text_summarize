@@ -1,0 +1,20 @@
+from flask import Flask, request, render_template, jsonify
+from gensim.summarization import summarize
+from gensim.summarization import keywords
+app = Flask(__name__)
+
+@app.route('/summarize', methods = ['POST'])
+def my_form_post():
+	text = request.form['text']
+	if len(text)>10000:
+		text = text[:10000]
+
+	if len(text)>2000:
+		processed_text = summarize(text, ratio =0.05)
+	else:
+		processed_text = summarize(text)
+	dict_sample = {'key':processed_text}
+	return jsonify(dict_sample)
+
+if(__name__ == "__main__"):
+	app.run(port = 5000)

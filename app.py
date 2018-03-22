@@ -1,9 +1,15 @@
+import os
 from flask import Flask, request, render_template, jsonify
+import re
+import math
+from collections import Counter
 import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from statistics import mode
 import  numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
+from gensim.summarization import summarize
+from gensim.summarization import keywords
 app = Flask(__name__)
 
 def extract_NN(sent):
@@ -113,11 +119,79 @@ def extract(text):
     
     return jsonify(response)
 
-@app.route('/keywords', methods = ['POST'])
-def my_form_post():
-	text = request.form['text']
-	processed_text = extract(text)
-	return processed_text
+def get_cosine(vec1, vec2):
+    intersection = set(vec1.keys()) & set(vec2.keys())
+    numerator = sum([vec1[x] * vec2[x] for x in intersection])
 
-if(__name__ == "__main__"):
-	app.run(port = 5000)
+    sum1 = sum([vec1[x]**2 for x in vec1.keys()])
+    sum2 = sum([vec2[x]**2 for x in vec2.keys()])
+    denominator = math.sqrt(sum1) * math.sqrt(sum2)
+
+    if not denominator:
+        return 0.0
+    else:
+        return float(numerator) / denominator
+
+
+def text_to_vector(text):
+    word = re.compile(r'\w+')
+    words = word.findall(text)
+    return Counter(words)
+
+
+def get_result(content_a, content_b):
+    text1 = content_a
+    text2 = content_b
+
+    vector1 = text_to_vector(text1)
+    vector2 = text_to_vector(text2)
+
+    cosine_result = get_cosine(vector1, vector2)
+    return cosine_result
+
+@app.route('/duplicate', methods = ['POST'])
+def function_duplicate():
+    text1 = request.form['text']
+    if os.path.exists('text_save.txt'):
+        append_write = 'a' # append if already exists
+    else:
+        append_write = 'w'
+    if append_write == 'w':
+        text2 = ' '
+    elif append_write == 'a':
+        with open('text_save.txt','r') as myfile:
+            text2 = myfile.read().replace('\n', '')
+    with open('text_save.txt',append_write) as myfile:
+        myfile.write(text1 + '#file_end_here#' + '\n')
+    # text2 = request.form['text2']
+    text2 = text2.split('#file_end_here#')
+    li = []
+    for i in text2:
+        y = get_result(text1,i)
+        li.append(y)
+    x = max(li)
+    processed_text = str(x*100)
+    dict_sample = {'key':processed_text}
+    return jsonify(dict_sample)
+
+@app.route('/keyword', methods = ['POST'])
+def function_keywords():
+    text = request.form['text']
+    processed_text = extract(text)
+    return processed_text
+
+@app.route('/summarize', methods = ['POST'])
+def function_summarize():
+    text = request.form['text']
+    if len(text)>10000:
+        text = text[:10000]
+
+    if len(text)>2000:
+        processed_text = summarize(text, ratio =0.05)
+    else:
+        processed_text = summarize(text)
+    dict_sample = {'key':processed_text}
+    return jsonify(dict_sample)
+
+if __name__ == "__main__":
+    app.run(host = '0.0.0.0')

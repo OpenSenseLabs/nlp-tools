@@ -9,6 +9,7 @@ from statistics import mode
 import  numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.summarization import summarize
+from gensim.summarization.textcleaner import split_sentences
 from gensim.summarization import keywords
 app = Flask(__name__)
 
@@ -183,13 +184,11 @@ def function_keywords():
 @app.route('/summarize', methods = ['POST'])
 def function_summarize():
     text = request.form['text']
-    if len(text)>10000:
-        text = text[:10000]
-
-    if len(text)>2000:
-        processed_text = summarize(text, ratio =0.05)
-    else:
-        processed_text = summarize(text)
+    sentences=split_sentences(text)
+    if len(sentences)<5:
+        return jsonify({"ERROR":"Not enough sentences found. There must be at least 5 sentences for summary."}),400
+    processed_text = summarize(text)
+    print(processed_text)
     dict_sample = {'key':processed_text}
     return jsonify(dict_sample)
 

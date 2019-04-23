@@ -22,7 +22,7 @@ pip3 install -r requirements.txt
 ```
 6. Download all the required NLTK datasets/models (```averaged_perceptron_tagger```, ```punkt```, and ```vader_lexicon```)
 ```
-python3 nltk.py
+python3 nltk_utils.py
 ```
 7. Run the Python script (Server runs on ```http://0.0.0.0:5000/``` by default)
 ```
